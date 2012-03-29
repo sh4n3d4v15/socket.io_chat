@@ -1,53 +1,108 @@
+<head>
 <script src="/socket.io/socket.io.js"></script>
+<link rel="stylesheet" type="text/css" href="main.css">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+<style type="text/css">
+body{
+	background-color:#eee;
+}
+#wrapper{
+	width:960px;
+	margin:0 auto;
+}
+</style>
+</head>
 <script>
-	var socket = io.connect('127.0.0.1:8080');
+$(function(){
 
+	var socket = io.connect();
+	var xpos = "";
+	var ypos = "";
+	var position = "";
+	var y = 0;
+	var x = 0;
+
+
+	function handleMouseDown(e, sbar){
+    if (e.button == 0){
+    	xpos = e.pageX - offset.left;
+		ypos = e.pageY - offset.top;
+		x = xpos;
+		y = ypos;
+		position = xpos+","+ypos;
+    	socket.emit('start', position);
+    	console.log(e.pageX+" "+e.pageY);
+        $(this).mousemove(function(event){
+            handleMouseMove(event, sbar);
+        });
+    	}
+	}
+	function handleMouseUp(e){
+	    $(this).unbind('mousemove');       
+	}
+	function handleMouseMove(e){
+	    xpos = e.pageX - offset.left;
+		ypos = e.pageY - offset.top;
+		position = xpos+","+ypos;
+
+		socket.emit('moved', position);
+		c.beginPath();
+		c.strokeStyle = '#f00'; // red
+		c.lineWidth = 3;
+		c.moveTo(x,y);
+		c.lineTo(xpos ,ypos);
+		c.stroke();
+		x = xpos;
+		y = ypos;
+	}
+	//var canvas = $("#draw");
+	//var c = canvas.get(0).getContext("2d");
 	// on connection to server, ask for user's name with an anonymous callback
-	socket.on('connect', function(){
-		// call the server-side function 'adduser' and send one parameter (value of prompt)
-		socket.emit('adduser', prompt("What's your name?"));
-	});
+	socket.on('connect', function(){});
 
-	// listener, whenever the server emits 'updatechat', this updates the chat body
-	socket.on('updatechat', function (username, data) {
-		$('#conversation').append('<b>'+username + ':</b> ' + data + '<br>');
-	});
 
-	// listener, whenever the server emits 'updateusers', this updates the username list
-	socket.on('updateusers', function(data) {
-		$('#users').empty();
-		$.each(data, function(key, value) {
-			$('#users').append('<div>' + key + '</div>');
-		});
-	});
+	socket.on('begun',function(position){
+		var both = position.split(',');
+		xpos = both[0]*1;
+		ypos = both[1]*1;
+		x = xpos;
+		y = ypos;
+	})
+
+
+	socket.on('newPos',function(position){
+		var both = position.split(',');
+		xpos = both[0]*1;
+		ypos = both[1]*1;
+		console.log(position);
+		c.beginPath()
+		c.lineWidth = 3;
+		c.strokeStyle = '#f00'; // red
+		c.moveTo(x,y);
+		c.lineTo(xpos ,ypos);
+		c.stroke();
+		x = xpos;
+		y = ypos;
+	})
+
+
 
 	// on load of page
-	$(function(){
-		// when the client clicks SEND
-		$('#datasend').click( function() {
-			var message = $('#data').val();
-			$('#data').val('');
-			// tell server to execute 'sendchat' and send along one parameter
-			socket.emit('sendchat', message);
-		});
+	
 
-		// when the client hits ENTER on their keyboard
-		$('#data').keypress(function(e) {
-			if(e.which == 13) {
-				$(this).blur();
-				$('#datasend').focus().click();
-			}
-		});
-	});
+		var canvas = $("#draw");
+		var c = canvas.get(0).getContext("2d");
+		var offset = canvas.offset();
+		$(canvas).mousedown(handleMouseDown)
+                 .mouseup(handleMouseUp);
+	})
+
+	
 
 </script>
-<div style="float:left;width:100px;border-right:1px solid black;height:300px;padding:10px;overflow:scroll-y;">
-	<b>USERS</b>
-	<div id="users"></div>
-</div>
-<div style="float:left;width:300px;height:250px;overflow:scroll-y;padding:10px;">
-	<div id="conversation"></div>
-	<input id="data" style="width:200px;" />
-	<input type="button" id="datasend" value="send" />
-</div>
+<body>
+	<div id="wrapper">
+<canvas id = "draw" width="900" height= "700" style="margin:0 auto;border:2px solid grey;border-radius:10px"></canvas>
+	</div>
+
+</body>
